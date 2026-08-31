@@ -1,11 +1,10 @@
 import pandas as pd
 import PyPDF2
-import json
-import re
 import os
+import re
+from backend import models
 
 def extract_from_xlsx(file_path):
-    print(f"Extracting from XLSX: {file_path}")
     materials = {}
     try:
         xl = pd.ExcelFile(file_path)
@@ -21,11 +20,6 @@ def extract_from_xlsx(file_path):
                     if codigo == 'nan' or not codigo.isdigit():
                         continue
                     
-                    # Assuming UC might be in column 2 (Operacion Grafo), though it often is NaN in materials
-                    uc = str(row.iloc[2]).strip()
-                    if uc == 'nan':
-                        uc = ""
-                        
                     descripcion = str(row.iloc[3]).strip()
                     unidad = str(row.iloc[4]).strip()
                     cantidad = float(row.iloc[5]) if not pd.isna(row.iloc[5]) else 0.0
@@ -33,8 +27,7 @@ def extract_from_xlsx(file_path):
                     if cantidad > 0:
                         materials[codigo] = {
                             "codigo_ax": codigo_ax,
-                            "codigo": codigo,
-                            "uc": uc,
+                            "codigo_sap": codigo,
                             "descripcion": descripcion,
                             "unidad": unidad if unidad != 'nan' else 'N/A',
                             "qty_recalculo": cantidad
@@ -46,7 +39,6 @@ def extract_from_xlsx(file_path):
     return materials
 
 def extract_from_pdf(file_path):
-    print(f"Extracting from PDF: {file_path}")
     materials = {}
     totals = {}
     try:
@@ -57,7 +49,6 @@ def extract_from_pdf(file_path):
                 lines = text.split('\n')
                 for line in lines:
                     line = line.strip()
-                    # Match materials: 01034256 DIV.1:8 FOSC  B6-P-F CIER.FOSC PZA 3.00 580.00 1740.00
                     match_mat = re.search(r'^(\d{8})\s+(.+?)\s+([A-Za-z]+)\s+([\d\.]+)\s+([\d\.]+)\s+([\d\.]+)', line)
                     if match_mat:
                         codigo = match_mat.group(1)
@@ -67,15 +58,13 @@ def extract_from_pdf(file_path):
                         
                         if cantidad > 0:
                             materials[codigo] = {
-                                "codigo_ax": "", # PDF usually doesn't have AX code for materials
-                                "codigo": codigo,
-                                "uc": "", # PDF materials summary doesn't show UC
+                                "codigo_ax": "", 
+                                "codigo_sap": codigo,
                                 "descripcion": descripcion,
                                 "unidad": unidad,
                                 "qty_costeo": cantidad
                             }
                     
-                    # Match totals like: TOTAL POSTES DE MADERA 9106.51 or INDICADOR COSTO FO
                     match_total = re.search(r'^(TOTAL.+?|INDICADOR COSTO FO)\s+([\d\.]+)', line)
                     if match_total:
                         name = match_total.group(1).strip()
@@ -85,65 +74,99 @@ def extract_from_pdf(file_path):
         print(f"Error reading PDF: {e}")
     return materials, totals
 
-def generate_materials_data(archivos_dir):
-    materials_db = {}
-    extracted_totals = {}
-    
+def get_or_create_unit(db, name):
+    if not name:
+        return None
+    unit = db.query(models.Unit).filter(models.Unit.name == name).first()
+    if not unit:
+        unit = models.Unit(name=name)
+        db.add(unit)
+        db.commit()
+        db.refresh(unit)
+    return unit
+
+def process_and_insert_data(project_id, archivos_dir, db):
     if not os.path.exists(archivos_dir):
-        os.makedirs(archivos_dir)
+        return
         
     for filename in os.listdir(archivos_dir):
         file_path = os.path.join(archivos_dir, filename)
         if filename.endswith(".xlsx") and not filename.startswith("~"):
             xlsx_data = extract_from_xlsx(file_path)
             for cod, data in xlsx_data.items():
-                if cod not in materials_db:
-                    materials_db[cod] = {
-                        "codigo_ax": data["codigo_ax"], 
-                        "codigo": cod, 
-                        "uc": data["uc"],
-                        "descripcion": data["descripcion"], 
-                        "unidad": data["unidad"], 
-                        "qty_costeo": 0, 
-                        "qty_recalculo": 0, 
-                        "qty_recibido": 0, 
-                        "qty_usado": 0
-                    }
+                unit = get_or_create_unit(db, data["unidad"])
+                
+                material = db.query(models.CatalogMaterial).filter(models.CatalogMaterial.codigo_sap == cod).first()
+                if not material:
+                    material = models.CatalogMaterial(
+                        codigo_sap=cod,
+                        codigo_ax=data["codigo_ax"],
+                        descripcion=data["descripcion"],
+                        unit_id=unit.id if unit else None
+                    )
+                    db.add(material)
+                    db.commit()
+                    db.refresh(material)
+                
+                req = db.query(models.ProjectRequirement).filter(
+                    models.ProjectRequirement.project_id == project_id,
+                    models.ProjectRequirement.material_id == material.id,
+                    models.ProjectRequirement.source == 'RECALCULO'
+                ).first()
+                if req:
+                    req.quantity += data["qty_recalculo"]
                 else:
-                    if not materials_db[cod]["codigo_ax"] and data["codigo_ax"]:
-                        materials_db[cod]["codigo_ax"] = data["codigo_ax"]
-                    if not materials_db[cod]["uc"] and data["uc"]:
-                        materials_db[cod]["uc"] = data["uc"]
-                materials_db[cod]["qty_recalculo"] += data["qty_recalculo"]
+                    db.add(models.ProjectRequirement(
+                        project_id=project_id,
+                        material_id=material.id,
+                        source='RECALCULO',
+                        quantity=data["qty_recalculo"]
+                    ))
+                db.commit()
                 
         elif filename.endswith(".pdf"):
             pdf_data, pdf_totals = extract_from_pdf(file_path)
-            # Merge totals
-            for k, v in pdf_totals.items():
-                if k not in extracted_totals:
-                    extracted_totals[k] = 0
-                extracted_totals[k] += v
-                
+            for name, val in pdf_totals.items():
+                pt = db.query(models.ProjectTotal).filter(
+                    models.ProjectTotal.project_id == project_id,
+                    models.ProjectTotal.name == name
+                ).first()
+                if pt:
+                    pt.value += val
+                else:
+                    db.add(models.ProjectTotal(
+                        project_id=project_id,
+                        name=name,
+                        value=val
+                    ))
+            db.commit()
+            
             for cod, data in pdf_data.items():
-                if cod not in materials_db:
-                    materials_db[cod] = {
-                        "codigo_ax": data["codigo_ax"], 
-                        "codigo": cod, 
-                        "uc": data["uc"],
-                        "descripcion": data["descripcion"], 
-                        "unidad": data["unidad"], 
-                        "qty_costeo": 0, 
-                        "qty_recalculo": 0, 
-                        "qty_recibido": 0, 
-                        "qty_usado": 0
-                    }
-                materials_db[cod]["qty_costeo"] += data["qty_costeo"]
-                
-    return {"materials": materials_db, "totals": extracted_totals}
-
-if __name__ == '__main__':
-    # Test extraction
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    archivos_dir = os.path.join(base_dir, "archivos")
-    data = generate_materials_data(archivos_dir)
-    print(json.dumps(data, indent=2))
+                unit = get_or_create_unit(db, data["unidad"])
+                material = db.query(models.CatalogMaterial).filter(models.CatalogMaterial.codigo_sap == cod).first()
+                if not material:
+                    material = models.CatalogMaterial(
+                        codigo_sap=cod,
+                        codigo_ax=data["codigo_ax"],
+                        descripcion=data["descripcion"],
+                        unit_id=unit.id if unit else None
+                    )
+                    db.add(material)
+                    db.commit()
+                    db.refresh(material)
+                    
+                req = db.query(models.ProjectRequirement).filter(
+                    models.ProjectRequirement.project_id == project_id,
+                    models.ProjectRequirement.material_id == material.id,
+                    models.ProjectRequirement.source == 'COSTEO'
+                ).first()
+                if req:
+                    req.quantity += data["qty_costeo"]
+                else:
+                    db.add(models.ProjectRequirement(
+                        project_id=project_id,
+                        material_id=material.id,
+                        source='COSTEO',
+                        quantity=data["qty_costeo"]
+                    ))
+                db.commit()

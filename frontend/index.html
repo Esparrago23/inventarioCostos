@@ -1,96 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Material Tracking</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>Registro de Materiales</h1>
-            <div class="actions">
-                <input type="text" id="search-input" placeholder="Buscar por descripción..." class="search-box">
-                <button id="btn-manual" class="btn btn-success">Registrar Entrada Manual</button>
-            </div>
-        </header>
-
-        <div class="upload-container">
-            <div class="upload-section">
-                <h3>Subir Archivos PDF (Costeo)</h3>
-                <form id="upload-pdf-form" class="upload-form">
-                    <input type="file" id="pdf-input" name="files" accept=".pdf" multiple required>
-                    <button type="submit" class="btn btn-primary">Subir PDFs</button>
-                </form>
-                <div id="upload-pdf-status" class="status-msg"></div>
-            </div>
-
-            <div class="upload-section">
-                <h3>Subir Archivos XLSX (Recálculo)</h3>
-                <form id="upload-xlsx-form" class="upload-form">
-                    <input type="file" id="xlsx-input" name="files" accept=".xlsx" multiple required>
-                    <button type="submit" class="btn btn-primary">Subir XLSXs</button>
-                </form>
-                <div id="upload-xlsx-status" class="status-msg"></div>
-            </div>
-            
-            <div class="upload-section">
-                <h3>Archivos Procesados</h3>
-                <ul id="uploaded-files-list" style="margin-top: 10px; font-size: 13px; color: #555; padding-left: 20px;">
-                    <!-- Files will be listed here -->
-                </ul>
-            </div>
-        </div>
-
-        <!-- Manual Entry Modal -->
-        <div id="manual-modal" class="modal">
-            <div class="modal-content">
-                <span class="close-btn">&times;</span>
-                <h2>Registrar Entrada de Material</h2>
-                <form id="manual-entry-form">
-                    <div class="form-grid">
-                        <div class="form-group"><label>Fecha</label><input type="date" id="m-fecha" required></div>
-                        <div class="form-group"><label>Código Articulo (AX)</label><input type="text" id="m-ax"></div>
-                        <div class="form-group"><label>Nombre del Producto</label><input type="text" id="m-desc" required></div>
-                        <div class="form-group"><label>Código SAP/Telmex</label><input type="text" id="m-sap" required></div>
-                        <div class="form-group"><label>Sitio Origen</label><input type="text" id="m-sitio-o"></div>
-                        <div class="form-group"><label>Sitio Destino</label><input type="text" id="m-sitio-d"></div>
-                        <div class="form-group"><label>Almacén de Origen</label><input type="text" id="m-alm-o"></div>
-                        <div class="form-group"><label>Almacén Destino</label><input type="text" id="m-alm-d"></div>
-                        <div class="form-group"><label>Ubicación</label><input type="text" id="m-ubi"></div>
-                        <div class="form-group"><label>Cantidad</label><input type="number" step="any" id="m-cant" required></div>
-                        <div class="form-group"><label>Unidad</label><input type="text" id="m-unidad" required></div>
-                    </div>
-                    <button type="submit" class="btn btn-success" style="margin-top: 15px;">Guardar Entrada</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Código AX</th>
-                        <th>Código SAP / UC</th>
-                        <th>Descripción</th>
-                        <th>Unidad</th>
-                        <th>Cantidad Costeo</th>
-                        <th>Cantidad Recálculo</th>
-                        <th>Almacén</th>
-                        <th>Total</th>
-                        <th>Producto Recibido</th>
-                        <th>Usado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="materials-tbody">
-                    <!-- Data will be populated here by JavaScript -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    <script src="app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>frontend</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
