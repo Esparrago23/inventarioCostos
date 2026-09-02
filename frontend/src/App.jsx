@@ -5,6 +5,7 @@ import ProjectDetail from './pages/ProjectDetail';
 import Inventory from './pages/Inventory';
 import CatalogsMaterials from './pages/CatalogsMaterials';
 import CatalogsServices from './pages/CatalogsServices';
+import CatalogsWarehouses from './pages/CatalogsWarehouses';
 
 function App() {
   const location = useLocation();
@@ -16,7 +17,7 @@ function App() {
       {/* Sidebar Navigation */}
       <aside className="w-64 bg-gray-100 text-gray-800 flex flex-col border-r border-gray-300">
         <div className="p-4 bg-gray-200 border-b border-gray-300">
-          <h2 className="text-xl font-bold tracking-wider text-center text-gray-800">sie</h2>
+          <h2 className="text-xl font-bold tracking-wider text-center text-gray-800">Siesur</h2>
         </div>
         <nav className="flex-1 px-2 py-4 space-y-1">
           <NavLink
@@ -73,6 +74,17 @@ function App() {
                 >
                   Materiales
                 </NavLink>
+                <NavLink
+                  to="/catalogs/warehouses"
+                  className={({ isActive }) =>
+                    `block px-4 py-2 text-sm font-medium transition-colors border-l-4 ${
+                      isActive ? 'bg-gray-200 text-black border-blue-500' : 'text-gray-500 border-transparent hover:bg-gray-200 hover:text-black'
+                    }`
+                  }
+                >
+                  Almacenes
+                </NavLink>
+    
               </div>
             )}
           </div>
@@ -87,6 +99,7 @@ function App() {
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/catalogs/services" element={<CatalogsServices />} />
           <Route path="/catalogs/materials" element={<CatalogsMaterials />} />
+          <Route path="/catalogs/warehouses" element={<CatalogsWarehouses />} />
         </Routes>
       </main>
     </div>

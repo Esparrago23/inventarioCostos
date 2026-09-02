@@ -50,3 +50,26 @@ async def upload_files(project_id: str, files: List[UploadFile] = File(...), db:
         process_and_insert_data(project_id, archivos_dir, db)
         
     return JSONResponse(content={"message": f"{len(files)} files uploaded and data merged"})
+
+from fastapi.responses import FileResponse
+
+@router.get("/files/{project_id}/{filename}")
+def download_file(project_id: str, filename: str):
+    archivos_dir = get_project_archivos_dir(project_id)
+    file_path = os.path.join(archivos_dir, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    media_type = "application/pdf" if filename.lower().endswith(".pdf") else None
+    return FileResponse(file_path, filename=filename, content_disposition_type="inline", media_type=media_type)
+
+@router.delete("/files/{project_id}/{filename}")
+def delete_file(project_id: str, filename: str, db: Session = Depends(get_db)):
+    archivos_dir = get_project_archivos_dir(project_id)
+    file_path = os.path.join(archivos_dir, filename)
+    
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        process_and_insert_data(project_id, archivos_dir, db)
+        return {"status": "success"}
+    else:
+        raise HTTPException(status_code=404, detail="File not found")

@@ -7,8 +7,18 @@ from backend.database import Base
 class Project(Base):
     __tablename__ = "projects"
     id = Column(String, primary_key=True, index=True)
-    nombre = Column(String)
-    tipo = Column(String)
+    nombre = Column(String, index=True)
+    tipo = Column(String)  # 'DISTRITO' or 'N24'
+    status = Column(String, default="ACTIVO")
+    
+    operacion = Column(String, nullable=True)
+    oei = Column(String, nullable=True)
+    oe = Column(String, nullable=True)
+    pep = Column(String, nullable=True)
+    central = Column(String, nullable=True)
+    ruta = Column(String, nullable=True)
+    dis = Column(String, nullable=True)
+    lugar = Column(String, nullable=True)
     
     requirements = relationship("ProjectRequirement", back_populates="project", cascade="all, delete-orphan")
     transactions = relationship("InventoryTransaction", back_populates="project", cascade="all, delete-orphan")
@@ -52,9 +62,16 @@ class ProjectRequirement(Base):
     __tablename__ = "project_requirements"
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(String, ForeignKey("projects.id"))
-    material_id = Column(Integer, ForeignKey("catalogo_materiales.id"))
+    material_id = Column(Integer, ForeignKey("catalogo_materiales.id"), nullable=True)
     source = Column(String) # COSTEO or RECALCULO
     quantity = Column(Float, default=0.0)
+    
+    uc = Column(String, nullable=True)
+    uc_desc = Column(String, nullable=True)
+    material_desc_override = Column(String, nullable=True)
+    unit_override = Column(String, nullable=True)
+    price = Column(Float, default=0.0)
+    is_service = Column(Integer, default=0)
     
     project = relationship("Project", back_populates="requirements")
     material = relationship("CatalogMaterial")
@@ -76,6 +93,10 @@ class InventoryTransaction(Base):
     sitio_origen = Column(String, default="")
     sitio_destino = Column(String, default="")
     ubicacion = Column(String, default="")
+    owner_id = Column(String, default="")
+    ticket_reference = Column(String, default="")
+    almacen_origen = Column(String, default="")
+    almacen_destino = Column(String, default="")
     
     project = relationship("Project", back_populates="transactions")
     material = relationship("CatalogMaterial")

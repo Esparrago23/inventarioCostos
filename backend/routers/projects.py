@@ -17,12 +17,30 @@ def get_projects(db: Session = Depends(get_db)):
     # The API spec says `{"projects": [...]}`
     return {"projects": projects}
 
+@router.get("/{project_id}")
+def get_project(project_id: str, db: Session = Depends(get_db)):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"project": project}
+
 @router.post("")
 def create_project(proj: schemas.ProjectCreate, db: Session = Depends(get_db)):
+    # Auto-generate name if not provided
+    auto_nombre = f"{proj.pep or 'SIN PEP'} {proj.lugar or ''}".strip()
+    
     new_proj = models.Project(
         id=str(uuid.uuid4()),
-        nombre=proj.nombre,
-        tipo=proj.tipo
+        nombre=proj.nombre or auto_nombre,
+        tipo=proj.tipo,
+        operacion=proj.operacion,
+        oei=proj.oei,
+        oe=proj.oe,
+        pep=proj.pep,
+        central=proj.central,
+        ruta=proj.ruta,
+        dis=proj.dis,
+        lugar=proj.lugar
     )
     db.add(new_proj)
     db.commit()

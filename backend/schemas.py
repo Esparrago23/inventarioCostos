@@ -1,9 +1,19 @@
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 
+from typing import Optional, List, Dict
+
 class ProjectBase(BaseModel):
-    nombre: str
+    nombre: Optional[str] = None
     tipo: str
+    operacion: Optional[str] = None
+    oei: Optional[str] = None
+    oe: Optional[str] = None
+    pep: Optional[str] = None
+    central: Optional[str] = None
+    ruta: Optional[str] = None
+    dis: Optional[str] = None
+    lugar: Optional[str] = None
 
 class ProjectCreate(ProjectBase):
     pass
@@ -42,18 +52,35 @@ class UpdateItem(BaseModel):
     qty_recibido: Optional[float] = None
     qty_usado: Optional[float] = None
 
+class ManualEntryItem(BaseModel):
+    codigo_ax: str = ""
+    descripcion: str = ""
+    codigo_sap: str
+    cantidad: float
+    unidad: str = ""
+    almacen_destino: str = ""
+    sitio_origen: str = ""
+    sitio_destino: str = ""
+
 class ManualEntry(BaseModel):
     fecha: str
-    codigo_ax: str
-    descripcion: str
+    ticket_reference: str = ""
+    ubicacion: str = ""
+    materials: List[ManualEntryItem]
+
+class ValeBulkItem(BaseModel):
     codigo_sap: str
-    sitio_origen: str
-    sitio_destino: str
-    almacen_origen: str
-    almacen_destino: str
-    ubicacion: str
-    cantidad: float
-    unidad: str
+    quantity: float
+    ubicacion: str = ""
+
+class ValeBulkEntry(BaseModel):
+    fecha: str
+    ticket_reference: str = ""
+    sitio_origen: str = ""
+    sitio_destino: str = ""
+    almacen_origen: str = ""
+    almacen_destino: str = ""
+    items: List[ValeBulkItem]
 
 class CatalogoMaterialBase(BaseModel):
     codigo_sap: str
